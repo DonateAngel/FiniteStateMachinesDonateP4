@@ -2,10 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using System.Linq;
 
 public sealed class GameEniroment 
 {
-    private static GameEniroment insatnce;
+    private static GameEniroment instance;
     private List<GameObject> checkpoints = new List<GameObject>();
     public List<GameObject> Checkpoints { get { return checkpoints; } }
 
@@ -13,13 +14,16 @@ public sealed class GameEniroment
     {
         get
         {
-            if (insatnce == null)
+            if (instance == null)
             {
-                insatnce = new GameEniroment();
-                insatnce.Checkpoints.AddRange(GameObject.FindGameObjectsWithTag("Checkpoint"));
+                instance = new GameEniroment();
+                instance.Checkpoints.AddRange(GameObject.FindGameObjectsWithTag("Checkpoint"));
+
+                instance.checkpoints = instance.checkpoints.OrderBy(waypoint => waypoint.name).ToList(); 
 
             }
-            return insatnce;
+            return instance;
         }
     }
+    
 }
