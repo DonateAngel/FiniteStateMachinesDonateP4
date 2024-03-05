@@ -4,19 +4,19 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using System.Linq;
 
-public sealed class GameEniroment 
+public sealed class GameEnvironment
 {
-    private static GameEniroment instance;
+    private static GameEnvironment instance;
     private List<GameObject> checkpoints = new List<GameObject>();
     public List<GameObject> Checkpoints { get { return checkpoints; } }
 
-    public static GameEniroment Singleton
+    public static GameEnvironment Singleton
     {
         get
         {
             if (instance == null)
             {
-                instance = new GameEniroment();
+                instance = new GameEnvironment();
                 instance.Checkpoints.AddRange(GameObject.FindGameObjectsWithTag("Checkpoint"));
 
                 instance.checkpoints = instance.checkpoints.OrderBy(waypoint => waypoint.name).ToList(); 

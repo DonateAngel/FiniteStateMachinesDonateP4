@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEditor.Experimental.GraphView.GraphView;
@@ -84,7 +85,12 @@ public class Idle : State
     }
     public override void Update()
     {
-        if (Random.Range(0, 100) < 100)
+        if (CanSeePLayer())
+        {
+            nextState = new Pursue(npc, agent, anim, player);
+            stage = EVENT.EXIT;
+        }
+       else if (Random.Range(0, 100) < 100)
         {
             nextState = new Patrol(npc, agent, anim, player);
             stage = EVENT.EXIT;
@@ -109,7 +115,17 @@ public class Patrol : State
     }
     public override void Enter()
     {
-        currentIndex = 0;
+        float lastDist = Mathf.Infinity;
+        for(int i =0; i < GameEnvironment.Singleton.Checkpoints.Count; i++)
+        {
+            GameObject thisWP = GameEnvironment.Singleton.Checkpoints[i];
+            float distance = Vector3.Distance(npc.transform.position, thisWP.transform.position);
+            if (distance < lastDist)
+            {
+                currentIndex = i-1;
+                lastDist = distance;
+            }
+        }
         anim.SetTrigger("isWalking");
         base.Enter();
     }
@@ -118,15 +134,18 @@ public class Patrol : State
         base.Update();
         if (agent.remainingDistance < 1)
         {
-            if (currentIndex >= GameEniroment.Singleton.Checkpoints.Count - 1)
+            if (currentIndex >= GameEnvironment.Singleton.Checkpoints.Count - 1)
                 currentIndex = 0;
             else
                 currentIndex++;
 
-            agent.SetDestination(GameEniroment.Singleton.Checkpoints[currentIndex].transform.position);
-
+            agent.SetDestination(GameEnvironment.Singleton.Checkpoints[currentIndex].transform.position);
         }
-
+        if (CanSeePLayer())
+        {
+            nextState = new Pursue(npc, agent, anim, player);
+            stage = EVENT.EXIT;
+        }
     }
     public override void Exit()
     {
@@ -162,7 +181,56 @@ public class Pursue : State
             {
                 nextState = new Patrol(npc, agent, anim, player);
             }
+            if (CanSeePLayer())
+            {
+                nextState = new Pursue(npc, agent, anim, player);
+                stage = EVENT.EXIT;
+            }
         }
-        base.Update();
+        
+    }
+    public override void Exit()
+    {
+        
+            
+            anim.ResetTrigger("isRunning");
+            base.Exit();
+        
+    }
+    public class Attack : State
+    {
+        float rotationSpeed = 2.0f;
+        AudioSource shoot;
+        public Attack(GameObject _npc, NavMeshAgent _agent, Animator _anim, Transform _player)
+     : base(_npc, _agent, _anim, _player)
+        {
+            name = STATE.ATTACK;
+            shoot = _npc.GetComponent<AudioSource>();
+        }
+        public override void Enter()
+        {
+            anim.SetTrigger("isShooting");
+            agent.isStopped = true;
+            shoot.Play();
+            base.Enter();
+        }
+        public override void Update()
+        {
+            Vector3 direction = player.position - npc.transform.position;
+            float angle = Vector3.Angle(direction, npc.transform.forward);
+            direction.y = 0;
+            npc.transform.rotation = Quaternion.Slerp(npc.transform.rotation, Quaternion.LookRotation(direction), Time.deltaTime * rotationSpeed); ;
+        if (!CanAttackPlayer())
+            {
+                nextState = new Idle(npc, agent, anim, player);
+                stage = EVENT.EXIT;
+            }
+        }
+        public override void Exit()
+        {
+            anim.ResetTrigger("isShooting");
+            shoot.Stop();
+            base.Exit();
+        }
     }
 }
